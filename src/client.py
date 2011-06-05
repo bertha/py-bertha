@@ -5,6 +5,7 @@ import socket
 BERTHA_LIST = 0
 BERTHA_PUT = 1
 BERTHA_GET = 2
+BERTHA_QUIT = 3
 
 def str_to_hex(s):
         return ''.join((hex(ord(c))[2:].zfill(2) for c in s))
@@ -34,6 +35,15 @@ class BerthaClient(object):
                 self.host = host
                 self.port = port
                 self._addr = None
+
+        def quit(self):
+                """ QUITs the server """
+                sock = self._connect()
+                f = sock.makefile()
+                f.write(struct.pack("B", BERTHA_QUIT))
+                f.flush()
+                f.close()
+                sock.close()
 
         def list(self):
                 """ LISTs all keys on the server """

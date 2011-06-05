@@ -15,6 +15,9 @@ def parse_args():
         parser_list = subparsers.add_parser('list', help="List blobs on server")
         parser_list.set_defaults(func=do_list)
 
+        parser_quit = subparsers.add_parser('quit', help="Stops the server")
+        parser_quit.set_defaults(func=do_quit)
+
         parser_get = subparsers.add_parser('get', help="Get a blob by hash")
         parser_get.add_argument('hash', help="Hash of blob to retreive")
         parser_get.add_argument('file', default='-', nargs='?',
@@ -36,6 +39,8 @@ def main():
 def do_list(c, args):
         for h in c.list():
                 print h
+def do_quit(c, args):
+        c.quit()
 def do_get(c, args):
         close_file = True
         if args.file == '-':
