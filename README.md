@@ -2,6 +2,7 @@ Bertha Python client and CL
 ===========================
 
 This is
+
 1. a Python client library for [Bertha][bertha].
 2. a commandline interface to [Bertha][bertha].
 
