@@ -1,11 +1,14 @@
 import collections
 import struct
 import socket
+import os
 
 BERTHA_LIST = 0
 BERTHA_PUT = 1
 BERTHA_GET = 2
 BERTHA_QUIT = 3
+BERTHA_SPUT = 4
+BERTHA_SGET = 5
 
 def str_to_hex(s):
         return ''.join((hex(ord(c))[2:].zfill(2) for c in s))
@@ -59,21 +62,39 @@ class BerthaClient(object):
                 f.close()
                 sock.close()
 
-        def put(self):
+        def put(self, size=None):
                 """ Returns an object with attributes f and finish.
                     f is a file object to which you write the data to PUT
                     finish is a method, which when called finalizes the PUT
-                    and returns the key of the blob. """
+                    and returns the key of the blob.
+                    With size you can optionally specify the size of the blob
+                    you will send.  This allows the server to preallocate. """
                 sock = self._connect()
                 f = sock.makefile()
-                f.write(struct.pack("B", BERTHA_PUT))
+                if size is None:
+                        f.write(struct.pack("B", BERTHA_PUT))
+                else:
+                        f.write(struct.pack("<BQ", BERTHA_SPUT, size))
                 return BerthaPutContext(sock, f)
 
-        def put_file(self, file_obj):
-                """ PUTs the file() object <file_obj> on the server """
+        def put_file(self, file_obj, size=None):
+                """ PUTs the file() object <file_obj> on the server.
+                    If the object has a fileno(), we will fstat it to determine
+                    its size and send it along the request such that the server
+                    can preallocate the space.
+                    If a size is specified via <size>, we will send that
+                    size instead.  However, we will still send as much as
+                    we can read, whether that is less or more than size. """
                 sock = self._connect()
                 f = sock.makefile()
-                f.write(struct.pack("B", BERTHA_PUT))
+                if size is None and hasattr(file_obj, 'fileno'):
+                        stat_size = os.fstat(file_obj.fileno()).st_size
+                        if stat_size != 0:
+                                size = stat_size
+                if size is None:
+                        f.write(struct.pack("B", BERTHA_PUT))
+                else:
+                        f.write(struct.pack("<BQ", BERTHA_SPUT, size))
                 while True:
                         buf = file_obj.read(4096)
                         if not buf:
@@ -90,7 +111,7 @@ class BerthaClient(object):
                 """ PUTs a string on the server """
                 sock = self._connect()
                 f = sock.makefile()
-                f.write(struct.pack("B", BERTHA_PUT))
+                f.write(struct.pack("<BQ", BERTHA_SPUT, len(s)))
                 f.write(s)
                 f.flush()
                 sock.shutdown(socket.SHUT_WR)
@@ -108,6 +129,18 @@ class BerthaClient(object):
                 f.flush()
                 sock.shutdown(socket.SHUT_WR)
                 return f
+
+        def sget(self, key):
+                """ SGETs a file from the server.  That is: a pair (fd, s)
+                    is returned, where fd is a file object to read from
+                    and s is the length of fd """
+                sock = self._connect()
+                f = sock.makefile()
+                f.write(struct.pack("B", BERTHA_SGET))
+                f.write(hex_to_str(key))
+                f.flush()
+                sock.shutdown(socket.SHUT_WR)
+                return (f, struct.unpack("<Q", f.read(8))[0])
 
         def _connect(self):
                 s = None
