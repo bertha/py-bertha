@@ -9,6 +9,7 @@ BERTHA_GET = 2
 BERTHA_QUIT = 3
 BERTHA_SPUT = 4
 BERTHA_SGET = 5
+BERTHA_SIZE = 6
 
 def str_to_hex(s):
         return ''.join((hex(ord(c))[2:].zfill(2) for c in s))
@@ -140,7 +141,26 @@ class BerthaClient(object):
                 f.write(hex_to_str(key))
                 f.flush()
                 sock.shutdown(socket.SHUT_WR)
-                return (f, struct.unpack("<Q", f.read(8))[0])
+                raw_size = f.read(8)
+                if len(raw_size) == 0:
+                        raise KeyError
+                size = struct.unpack("<Q", raw_size)[0]
+                return (f, size)
+
+        def size(self, key):
+                """ Returns the size of the blob on the server.
+                    When the file does not exist, a KeyError is raised. """
+                sock = self._connect()
+                f = sock.makefile()
+                f.write(struct.pack("B", BERTHA_SIZE))
+                f.write(hex_to_str(key))
+                f.flush()
+                sock.shutdown(socket.SHUT_WR)
+                raw_size = f.read(8)
+                if len(raw_size) == 0:
+                        raise KeyError
+                size = struct.unpack("<Q", raw_size)[0]
+                return size
 
         def _connect(self):
                 s = None

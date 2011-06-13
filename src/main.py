@@ -29,6 +29,11 @@ def parse_args():
         parser_put.add_argument('file', default='-', nargs='?',
                         help="Source file")
         parser_put.set_defaults(func=do_put)
+
+        parser_size = subparsers.add_parser('size',
+                        help="Returns the size of a blob on the server")
+        parser_size.add_argument('hash', help="Hash of the blob")
+        parser_size.set_defaults(func=do_size)
         return parser.parse_args()
 
 def main():
@@ -68,6 +73,9 @@ def do_put(c, args):
         print c.put_file(f)
         if close_file:
                 f.close()
+
+def do_size(c, args):
+        print c.size(args.hash)
 
 if __name__ == '__main__':
         main()
