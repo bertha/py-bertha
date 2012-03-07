@@ -6,7 +6,7 @@ This is
 1. a Python client library for [Bertha][bertha].
 2. a commandline interface to [Bertha][bertha].
 
-[bertha]: http://github.com/bwesterb/bertha
+[bertha]: http://github.com/bwesterb/berthad
 
 Python
 ------
