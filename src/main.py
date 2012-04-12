@@ -34,6 +34,10 @@ def parse_args():
                         help="Returns the size of a blob on the server")
         parser_size.add_argument('hash', help="Hash of the blob")
         parser_size.set_defaults(func=do_size)
+
+        parser_stats = subparsers.add_parser('stats',
+                        help="Returns some statistical counters")
+        parser_stats.set_defaults(func=do_stats)
         return parser.parse_args()
 
 def main():
@@ -76,6 +80,9 @@ def do_put(c, args):
 
 def do_size(c, args):
         print c.size(args.hash)
+
+def do_stats(c, args):
+        print c.stats()
 
 if __name__ == '__main__':
         main()

@@ -10,6 +10,11 @@ BERTHA_QUIT = 3
 BERTHA_SPUT = 4
 BERTHA_SGET = 5
 BERTHA_SIZE = 6
+BERTHA_STATS = 7
+
+berthad_stats = collections.namedtuple('berthad_stats',
+                        ('n_cycle', 'n_GET_sent', 'n_PUT_received',
+                         'n_conns_accepted', 'n_conns_active'))
 
 def str_to_hex(s):
         return ''.join((hex(ord(c))[2:].zfill(2) for c in s))
@@ -161,6 +166,16 @@ class BerthaClient(object):
                         raise KeyError
                 size = struct.unpack("<Q", raw_size)[0]
                 return size
+
+        def stats(self):
+                """ Returns some counters as statistics. """
+                sock = self._connect()
+                f = sock.makefile()
+                f.write(struct.pack("B", BERTHA_STATS))
+                f.flush()
+                sock.shutdown(socket.SHUT_WR)
+                raw_stats = f.read(8*5)
+                return berthad_stats(*struct.unpack("<QQQQQ", raw_stats))
 
         def _connect(self):
                 s = None
