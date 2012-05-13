@@ -3,6 +3,8 @@ import struct
 import socket
 import os
 
+from sarah.string import to_hex, from_hex
+
 BERTHA_LIST = 0
 BERTHA_PUT = 1
 BERTHA_GET = 2
@@ -15,13 +17,6 @@ BERTHA_STATS = 7
 berthad_stats = collections.namedtuple('berthad_stats',
                         ('n_cycle', 'n_GET_sent', 'n_PUT_received',
                          'n_conns_accepted', 'n_conns_active'))
-
-def str_to_hex(s):
-        return ''.join((hex(ord(c))[2:].zfill(2) for c in s))
-
-def hex_to_str(s):
-        return ''.join((chr(int(s[2*i:2*(i+1)], 16))
-                        for i in xrange(len(s) / 2)))
 
 class BerthaPutContext(object):
         """ Context object returned by BerthaClient.put """
@@ -36,7 +31,7 @@ class BerthaPutContext(object):
                 self.f.close()
                 self.__sock.close()
                 self.f = None
-                return str_to_hex(key)
+                return to_hex(key)
 
 class BerthaClient(object):
         def __init__(self, host='localhost', port=819):
@@ -55,7 +50,23 @@ class BerthaClient(object):
                 sock.close()
 
         def list(self):
-                """ LISTs all keys on the server """
+                """ LISTs all keys on the server. """
+                sock = self._connect()
+                f = sock.makefile()
+                f.write(struct.pack("B", BERTHA_LIST))
+                f.flush()
+                ret = []
+                buf = to_hex(f.read())
+                i = 0
+                while len(buf) >= i + 64:
+                        ret.append(buf[i:i+64])
+                        i += 64
+                return ret
+
+        def list_iter(self):
+                """ LISTs all keys on the server.
+
+                This function returns an iterator. """
                 sock = self._connect()
                 f = sock.makefile()
                 f.write(struct.pack("B", BERTHA_LIST))
@@ -64,7 +75,7 @@ class BerthaClient(object):
                         s = f.read(32)
                         if len(s) != 32:
                                 break
-                        yield str_to_hex(s)
+                        yield to_hex(s)
                 f.close()
                 sock.close()
 
@@ -111,7 +122,7 @@ class BerthaClient(object):
                 key = f.read(32)
                 f.close()
                 sock.close()
-                return str_to_hex(key)
+                return to_hex(key)
         
         def put_str(self, s):
                 """ PUTs a string on the server """
@@ -124,14 +135,14 @@ class BerthaClient(object):
                 key = f.read(32)
                 f.close()
                 sock.close()
-                return str_to_hex(key)
+                return to_hex(key)
 
         def get(self, key):
                 """ GETs a file from the server """
                 sock = self._connect()
                 f = sock.makefile()
                 f.write(struct.pack("B", BERTHA_GET))
-                f.write(hex_to_str(key))
+                f.write(from_hex(key))
                 f.flush()
                 sock.shutdown(socket.SHUT_WR)
                 return f
@@ -143,7 +154,7 @@ class BerthaClient(object):
                 sock = self._connect()
                 f = sock.makefile()
                 f.write(struct.pack("B", BERTHA_SGET))
-                f.write(hex_to_str(key))
+                f.write(from_hex(key))
                 f.flush()
                 sock.shutdown(socket.SHUT_WR)
                 raw_size = f.read(8)
@@ -158,7 +169,7 @@ class BerthaClient(object):
                 sock = self._connect()
                 f = sock.makefile()
                 f.write(struct.pack("B", BERTHA_SIZE))
-                f.write(hex_to_str(key))
+                f.write(from_hex(key))
                 f.flush()
                 sock.shutdown(socket.SHUT_WR)
                 raw_size = f.read(8)
