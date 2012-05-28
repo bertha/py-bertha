@@ -163,6 +163,15 @@ class BerthaClient(object):
                 size = struct.unpack("<Q", raw_size)[0]
                 return (f, size)
 
+        def exists(self, key):
+                """ Returns whether a blob with the given key exists on
+                    the server. """
+                try:
+                        self.size()
+                        return True
+                except KeyError:
+                        return False
+
         def size(self, key):
                 """ Returns the size of the blob on the server.
                     When the file does not exist, a KeyError is raised. """
